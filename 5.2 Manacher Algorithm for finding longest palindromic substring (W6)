@@ -1,0 +1,202 @@
+import java.io.*;
+import java.util.*;
+
+public class Solution {
+
+
+static int[][] oddTable;
+static int[][] evenTable;
+static int[] log;
+
+// Manacher algorithm for odd-length palindromes
+static int[] manacherOdd(String s) {
+    int n = s.length();
+    int[] d1 = new int[n];
+
+    int left = 0;
+    int right = -1;
+
+    for (int i = 0; i < n; i++) {
+        int k = (i > right) ? 1 : Math.min(d1[left + right - i], right - i + 1);
+
+        while (i - k >= 0 && i + k < n &&
+                s.charAt(i - k) == s.charAt(i + k)) {
+            k++;
+        }
+
+        d1[i] = k;
+
+        if (i + k - 1 > right) {
+            left = i - k + 1;
+            right = i + k - 1;
+        }
+    }
+
+    return d1;
+}
+
+// Manacher algorithm for even-length palindromes
+static int[] manacherEven(String s) {
+    int n = s.length();
+    int[] d2 = new int[n];
+
+    int left = 0;
+    int right = -1;
+
+    for (int i = 0; i < n; i++) {
+        int k = (i > right) ? 0 :
+                Math.min(d2[left + right - i + 1], right - i + 1);
+
+        while (i - k - 1 >= 0 && i + k < n &&
+                s.charAt(i - k - 1) == s.charAt(i + k)) {
+            k++;
+        }
+
+        d2[i] = k;
+
+        if (i + k - 1 > right) {
+            left = i - k;
+            right = i + k - 1;
+        }
+    }
+
+    return d2;
+}
+
+// Build Sparse Table for Range Maximum Query
+static int[][] buildSparseTable(int[] arr) {
+    int n = arr.length;
+    int maxLog = log[n] + 1;
+
+    int[][] table = new int[maxLog][n];
+
+    for (int i = 0; i < n; i++) {
+        table[0][i] = arr[i];
+    }
+
+    for (int j = 1; j < maxLog; j++) {
+        int len = 1 << j;
+        int half = len >> 1;
+
+        for (int i = 0; i + len <= n; i++) {
+            table[j][i] = Math.max(
+                    table[j - 1][i],
+                    table[j - 1][i + half]
+            );
+        }
+    }
+
+    return table;
+}
+
+// Maximum value in range [left, right]
+static int rangeMax(int[][] table, int left, int right) {
+    if (left > right) {
+        return 0;
+    }
+
+    int length = right - left + 1;
+    int j = log[length];
+
+    return Math.max(
+            table[j][left],
+            table[j][right - (1 << j) + 1]
+    );
+}
+
+// Find maximum odd palindrome length inside window [L, R]
+static int longestOdd(int L, int R) {
+    int low = 1;
+    int high = (R - L + 2) / 2;
+    int answer = 0;
+
+    while (low <= high) {
+        int mid = (low + high) / 2;
+
+        // A palindrome with radius mid needs its center
+        // between L + mid - 1 and R - mid + 1
+        int centerLeft = L + mid - 1;
+        int centerRight = R - mid + 1;
+
+        if (centerLeft <= centerRight &&
+                rangeMax(oddTable, centerLeft, centerRight) >= mid) {
+            answer = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    return 2 * answer - 1;
+}
+
+// Find maximum even palindrome length inside window [L, R]
+static int longestEven(int L, int R) {
+    int low = 1;
+    int high = (R - L + 1) / 2;
+    int answer = 0;
+
+    while (low <= high) {
+        int mid = (low + high) / 2;
+
+        // For even palindrome with radius mid,
+        // center index must be between L + mid and R - mid + 1
+        int centerLeft = L + mid;
+        int centerRight = R - mid + 1;
+
+        if (centerLeft <= centerRight &&
+                rangeMax(evenTable, centerLeft, centerRight) >= mid) {
+            answer = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    return 2 * answer;
+}
+
+public static void main(String[] args) throws Exception {
+    BufferedReader br = new BufferedReader(
+            new InputStreamReader(System.in)
+    );
+
+    int n = Integer.parseInt(br.readLine().trim());
+    String s = br.readLine().trim();
+
+    // s + s contains all possible rotations
+    String doubled = s + s;
+    int m = doubled.length();
+
+    // Precompute logarithms
+    log = new int[m + 1];
+
+    for (int i = 2; i <= m; i++) {
+        log[i] = log[i / 2] + 1;
+    }
+
+    // Find palindrome radii
+    int[] odd = manacherOdd(doubled);
+    int[] even = manacherEven(doubled);
+
+    // Build RMQ tables
+    oddTable = buildSparseTable(odd);
+    evenTable = buildSparseTable(even);
+
+    StringBuilder output = new StringBuilder();
+
+    // Each rotation is a substring [i, i + n - 1]
+    for (int i = 0; i < n; i++) {
+        int L = i;
+        int R = i + n - 1;
+
+        int oddLength = longestOdd(L, R);
+        int evenLength = longestEven(L, R);
+
+        output.append(Math.max(oddLength, evenLength)).append('\n');
+    }
+
+    System.out.print(output);
+}
+
+}
