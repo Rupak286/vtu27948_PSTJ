@@ -1,0 +1,31 @@
+import java.io.*;
+import java.util.*;
+
+public class Solution {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        int t = sc.nextInt();
+
+        HashSet<String> set = new HashSet<String>();
+
+        for (int i = 0; i < t; i++) {
+
+            String first = sc.next();
+            String second = sc.next();
+
+            // Combine the two strings to represent one pair
+            String pair = first + "#" + second;
+
+            // Add pair to the set
+            set.add(pair);
+
+            // Print number of unique pairs
+            System.out.println(set.size());
+        }
+
+        sc.close();
+    }
+}
